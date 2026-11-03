@@ -1,0 +1,147 @@
+# Free model chain for LiteLLM. Free tiers only: no paid model, ever.
+# Each model is its own model group, so LiteLLM tries them in a fixed order through `fallbacks`
+# (deployments that share one model_name would be load-balanced instead).
+# Two entry points: `coder` for coding tools (Kilo, OpenCode) and `pipeline` for small JSON prompts (reportaday).
+# Model IDs checked against each provider on 2026-11-03. To refresh them, run /update-chain.
+#
+# How the free quotas count, which decides what adds volume:
+# - Gemini, Groq, Z.ai: a daily pool per model, so every extra model is more requests a day.
+# - OpenRouter: 50 requests/day across all :free models on the account. Extra models add fallbacks, not volume.
+# - Cloudflare Workers AI: 10k neurons/day across all models on the account. Same.
+# Models tried and dropped are in rejected.txt, with the reason.
+model_list:
+  # --- Gemini (Google AI Studio free tier). Free tier sometimes hangs under load: a 30s timeout
+  # falls back instead of waiting. Gemini 2.5 models are closed to new keys.
+  - model_name: coder                 # Gemini 3.5 Flash: the default coding model
+    litellm_params:
+      model: gemini/gemini-3.5-flash
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 30
+  - model_name: gemini-3.1-pro        # strongest free model; small daily pool, so it isn't first
+    litellm_params:
+      model: gemini/gemini-3.1-pro-preview
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 90                     # a Pro model thinks longer before the first token
+  - model_name: gemini-3.8-flash      # newer, but often hangs or answers 503 under load
+    litellm_params:
+      model: gemini/gemini-3.8-flash
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 30
+  - model_name: gemini-3.6-flash
+    litellm_params:
+      model: gemini/gemini-3.6-flash
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 30
+  - model_name: gemini-3-flash
+    litellm_params:
+      model: gemini/gemini-3-flash-preview
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 30
+  - model_name: gemini-4-argon        # experimental; answered tools but 503'd a plain prompt on 2026-11-03
+    litellm_params:
+      model: gemini/gemini-4-argon
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 30
+  - model_name: gemini-3.5-flash-lite # the Flash-Lite pools: weaker, shared with the pipeline's tail
+    litellm_params:
+      model: gemini/gemini-3.5-flash-lite
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 30
+  - model_name: gemini-3.1-flash-lite
+    litellm_params:
+      model: gemini/gemini-3.1-flash-lite
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 30
+  - model_name: gemini-3.1-flash-lite-preview
+    litellm_params:
+      model: gemini/gemini-3.1-flash-lite-preview
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 30
+
+  # --- OpenRouter :free (one 50/day pool for all of them)
+  - model_name: openrouter-dots-3     # highest published coding scores of the free models; a preview
+    litellm_params:
+      model: openrouter/dots-studio/dots-3-note-preview:free
+      api_key: os.environ/OPENROUTER_API_KEY
+  - model_name: openrouter-nemotron-ultra
+    litellm_params:
+      model: openrouter/nvidia/nemotron-3-ultra-550b-a55b:free
+      api_key: os.environ/OPENROUTER_API_KEY
+  - model_name: openrouter-north-code
+    litellm_params:
+      model: openrouter/cohere/north-mini-code:free
+      api_key: os.environ/OPENROUTER_API_KEY
+  - model_name: openrouter-nemotron-super
+    litellm_params:
+      model: openrouter/nvidia/nemotron-3.5-super-vl:free
+      api_key: os.environ/OPENROUTER_API_KEY
+
+  # --- Cloudflare Workers AI (10k neurons/day; the Free plan can't be billed). Bigger models such as
+  # Kimi K2.7 Code and GLM 5.3 are paid-plan only.
+  - model_name: cloudflare-gpt-oss
+    litellm_params:
+      # OpenAI-compatible endpoint: the native cloudflare/ route rejects list-of-parts message content
+      # (what Kilo and OpenCode send) with "Type mismatch of '/messages/0/content'".
+      model: openai/@cf/openai/gpt-oss-120b
+      api_key: os.environ/CLOUDFLARE_API_KEY
+      # The account id isn't secret; keeping it here means an edited .env can't break this step.
+      api_base: https://api.cloudflare.com/client/v4/accounts/6bb4a82558dcc8b76e447a687bade9fe/ai/v1
+      # It answers within seconds, but about 1 stream in 5 stalls part-way: give up after 30s idle, not 120.
+      stream_timeout: 30
+
+  # --- Z.ai (only the -flash models are free; 5.3 Flash asks for a recharge). Its free tier is often
+  # overloaded: 40s+ for a one-word reply. Give up on a stalled stream and fall back.
+  - model_name: zai-glm-4.7-flash
+    litellm_params:
+      model: zai/glm-4.7-flash
+      api_key: os.environ/ZAI_API_KEY
+      stream_timeout: 60
+      timeout: 90
+  - model_name: zai-glm-4.5-flash     # answers when 4.7-Flash is overloaded
+    litellm_params:
+      model: zai/glm-4.5-flash
+      api_key: os.environ/ZAI_API_KEY
+      stream_timeout: 60
+      timeout: 90
+
+  # --- Groq free plan: 1k requests and 200k tokens a day per model, but only 7-8k input tokens a
+  # minute, so it serves small prompts (the pipeline), never coding tools.
+  - model_name: pipeline              # gpt-oss-120b
+    litellm_params:
+      model: groq/openai/gpt-oss-120b
+      api_key: os.environ/GROQ_API_KEY
+  - model_name: groq-qwen3.8-27b
+    litellm_params:
+      model: groq/qwen/qwen3.8-27b
+      api_key: os.environ/GROQ_API_KEY
+  - model_name: groq-gpt-oss-20b
+    litellm_params:
+      model: groq/openai/gpt-oss-20b
+      api_key: os.environ/GROQ_API_KEY
+
+litellm_settings:
+  callbacks: hooks.normalise          # hooks.py: content the free providers all accept
+  num_retries: 0                      # no retries: a failure moves straight to the next free model
+  request_timeout: 120
+  drop_params: true
+
+router_settings:
+  allowed_fails: 1
+  # Short: most failures are per-minute limits or brief overloads. A used-up daily pool sends a
+  # retry-after header, and LiteLLM cools that model for as long as it says.
+  cooldown_time: 60
+  fallbacks:
+    # Coding: Gemini's per-model pools first (most volume), Pro after Flash so its small pool lasts,
+    # then the shared OpenRouter and Cloudflare pools, then Z.ai (slow), Flash-Lite last (weakest).
+    - coder: [gemini-3.1-pro, gemini-3.8-flash, gemini-3.6-flash, gemini-3-flash, gemini-4-argon,
+              openrouter-dots-3, openrouter-north-code, openrouter-nemotron-ultra, openrouter-nemotron-super,
+              cloudflare-gpt-oss, zai-glm-4.7-flash, zai-glm-4.5-flash,
+              gemini-3.5-flash-lite, gemini-3.1-flash-lite, gemini-3.1-flash-lite-preview]
+    # Pipeline: runs all day, so it keeps to its own lane (the Groq pools, Z.ai, Flash-Lite) and never
+    # touches the pools coding relies on (Gemini Flash and Pro, OpenRouter, Cloudflare). When this lane
+    # is empty the caller waits and retries rather than borrowing.
+    - pipeline: [groq-qwen3.8-27b, groq-gpt-oss-20b, zai-glm-4.5-flash, zai-glm-4.7-flash,
+                 gemini-3.1-flash-lite-preview, gemini-3.1-flash-lite, gemini-3.5-flash-lite]
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

@@ -1,0 +1,15 @@
+# Free model chain on 127.0.0.1:4000. Standalone: `docker compose up -d`.
+# Inside another project (as a git submodule), that project's compose file can `include:` this one.
+name: free-llm-chain
+services:
+  litellm:
+    container_name: free-llm-chain
+    image: ghcr.io/berriai/litellm:main-stable
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    ports:
+      - "127.0.0.1:4000:4000"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./hooks.py:/app/hooks.py:ro
+    env_file: .env
+    restart: unless-stopped
