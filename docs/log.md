@@ -2,6 +2,12 @@
 
 Newest first.
 
+## 2026-11-09
+
+**The proxy moves to port 4100**
+- Port 4000 is also the Firebase emulator page's default. One held it, so the proxy could not start, and the page
+  answered every health check with 200. Clients use `http://127.0.0.1:4100/v1` now.
+
 ## 2026-11-03
 
 **Load test: 60 of 60 requests answered**

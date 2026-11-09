@@ -1,6 +1,6 @@
 # free-llm-chain: notes for agents
 
-A LiteLLM proxy on `127.0.0.1:4000` that chains every free LLM tier we can find, so coding agents (Kilo,
+A LiteLLM proxy on `127.0.0.1:4100` that chains every free LLM tier we can find, so coding agents (Kilo,
 OpenCode) and small-prompt pipelines (reportaday) get as much free capacity as possible.
 
 - `config.yaml`: the models and the two fallback lanes, `coder` and `pipeline`. The pool notes at its top decide

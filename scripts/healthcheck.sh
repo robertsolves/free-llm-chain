@@ -6,7 +6,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 set -a; [ -f .env ] && . ./.env; set +a
-BASE="${LITELLM_BASE_URL:-http://127.0.0.1:4000}"
+BASE="${LITELLM_BASE_URL:-http://127.0.0.1:4100}"
 MODELS=($(sed -n 's/^ *- model_name: *\([^ ]*\).*/\1/p' config.yaml))
 [[ "${1:-}" == "--chain" ]] && MODELS=(coder pipeline)
 
